@@ -1,107 +1,133 @@
-import React, { useState } from "react";
+import { useContext, useState, useEffect } from "react";
+import { TaskContext } from "../contexts/TaskContext";
+import AssignedSelect from "./AssignedSelect";
+import ClientSelect from "./ClientSelect";
+import Box from "@mui/material/Box";
+import Modal from "@mui/material/Modal";
+import TextField from "@mui/material/TextField";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { postTask, updateTask, deleteTask } from "../firebase";
 
-function Modal({ isOpen, onClose }) {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    endDate: "",
-  });
+export default function BasicModal() {
+  const { taskData, setTaskData } = useContext(TaskContext);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  const handleOpen = () => setTaskData({});
+  const handleClose = () => setTaskData(null);
 
-    try {
-      const response = await fetch("/api/events", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
 
-      if (response.ok) {
-        onClose();
-      } else {
-        alert("An error occurred while adding the event");
+    function handleKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "n") {
+        handleOpen();
       }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("An error occurred while adding the event");
     }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (taskData) setIsModalOpen(true);
+    else setIsModalOpen(false);
+  }, [taskData ?? null]);
+
+  function handleCreate(e) {
+    e.preventDefault();
+    if (!taskData.dueDate) taskData.dueDate = "";
+    else taskData.dueDate = taskData.dueDate.$d.toLocaleDateString();
+    taskData.status = false;
+    postTask(taskData);
+    handleClose();
   }
 
-  if (!isOpen) return null;
+  function handleUpdate(e) {
+    e.preventDefault();
+    if (!taskData.dueDate.$D) taskData.dueDate = "";
+    else taskData.dueDate = taskData.dueDate.$d.toLocaleDateString();
+    updateTask(taskData);
+    handleClose();
+  }
+
+  function handleDelete() {
+    deleteTask(taskData.id);
+    handleClose();
+  }
+
+  const isNewTask = !taskData?.id;
 
   return (
-    <div className="fixed z-10 inset-0 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 bg-gray-700 bg-opacity-75 transition-opacity  flex items-center justify-center"
-          aria-hidden="true"
+    <div>
+      {taskData && (
+        <Modal
+          open={isModalOpen}
+          onClose={handleClose}
+          aria-labelledby="modal-modal-title"
+          aria-describedby="modal-modal-notes"
         >
-          <div className="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all max-w-lg w-full ">
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder="Event Title"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder="Event Description"
-                  ></textarea>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endDate: e.target.value })
-                    }
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                </div>
+          <Box className="absolute left-1/2 top-1/2 w-[90vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded bg-white p-4 shadow-lg focus:outline-none md:w-1/2">
+            <div className="mb-4 text-2xl font-medium">
+              {isNewTask ? "New Task" : "Edit Task"}
+            </div>
+            <form
+              onSubmit={isNewTask ? handleCreate : handleUpdate}
+              className="flex flex-col gap-4"
+            >
+              <TextField
+                label="Name"
+                variant="outlined"
+                value={taskData.name || ""}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, name: e.target.value })
+                }
+                required
+              />
+              <TextField
+                label="Notes"
+                variant="outlined"
+                multiline
+                value={taskData.notes || ""}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, notes: e.target.value })
+                }
+              />
+              <ClientSelect />
+              <AssignedSelect />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  value={taskData.dueDate || null}
+                  onChange={(newDate) =>
+                    setTaskData({ ...taskData, dueDate: newDate })
+                  }
+                  required
+                />
+              </LocalizationProvider>
+
+              <div className="mt-2 flex text-white">
                 <button
                   type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
+                  className="self-start rounded bg-blue-500 p-2 hover:bg-blue-600"
                 >
-                  Add Event
+                  {isNewTask ? "Create Task" : "Update"}
                 </button>
-                <button
-                  type="button"
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-700"
-                  onClick={onClose}
-                >
-                  Close
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
+
+                {!isNewTask && (
+                  <button
+                    onClick={handleDelete}
+                    className="ml-4 self-start rounded bg-red-500 p-2 hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </form>
+          </Box>
+        </Modal>
+      )}
     </div>
   );
 }
-
-export default Modal;
