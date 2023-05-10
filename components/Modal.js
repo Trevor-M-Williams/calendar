@@ -1,14 +1,18 @@
 import { useContext, useState, useEffect } from "react";
 import { TaskContext } from "../contexts/TaskContext";
+import { postTask, updateTask, deleteTask } from "../firebase";
+
 import AssignedSelect from "./AssignedSelect";
 import ClientSelect from "./ClientSelect";
+
 import Box from "@mui/material/Box";
 import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
+import Switch from "@mui/material/Switch";
+
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { postTask, updateTask, deleteTask } from "../firebase";
 
 export default function BasicModal() {
   const { taskData, setTaskData } = useContext(TaskContext);
@@ -58,6 +62,13 @@ export default function BasicModal() {
     handleClose();
   }
 
+  function toggleStatus() {
+    taskData.dueDate = taskData.dueDate.$d.toLocaleDateString();
+    taskData.status = !taskData.status;
+    updateTask(taskData);
+    setTaskData(null);
+  }
+
   const isNewTask = !taskData?.id;
 
   return (
@@ -70,8 +81,11 @@ export default function BasicModal() {
           aria-describedby="modal-modal-notes"
         >
           <Box className="absolute left-1/2 top-1/2 w-[90vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded bg-white p-4 shadow-lg focus:outline-none md:w-1/2">
-            <div className="mb-4 text-2xl font-medium">
+            <div className="mb-4 text-2xl font-medium flex justify-between">
               {isNewTask ? "New Task" : "Edit Task"}
+              {!isNewTask ? (
+                <Switch checked={taskData.status} onChange={toggleStatus} />
+              ) : null}
             </div>
             <form
               onSubmit={isNewTask ? handleCreate : handleUpdate}

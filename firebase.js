@@ -29,7 +29,6 @@ export function getTasks(setTasks) {
         }));
         // updateTasks(tasksList);
         setTasks(tasksList);
-        console.log(tasksList);
       } else {
         setTasks([]);
       }
