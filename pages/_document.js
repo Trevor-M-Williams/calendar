@@ -4,6 +4,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        <title>Calendar</title>
+        <meta name="description" content="A simple calendar app" />
         <link rel="shortcut icon" href="/logo.png" />
       </Head>
       <body>
