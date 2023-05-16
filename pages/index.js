@@ -4,9 +4,15 @@ import TaskProvider from "@/contexts/TaskContext";
 
 function Home() {
   return (
-    <TaskProvider>
-      <Calendar />
-    </TaskProvider>
+    <>
+      <Head>
+        <link rel="shortcut icon" href="/logo.png" />
+        <title>Calendar</title>
+      </Head>
+      <TaskProvider>
+        <Calendar />
+      </TaskProvider>
+    </>
   );
 }
 
